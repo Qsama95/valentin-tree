@@ -1,5 +1,5 @@
-
-import { useMemo, useRef, Suspense } from 'react';
+/// <reference types="@react-three/fiber" />
+import React, { useMemo, useRef, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Sparkles, Instance, Instances, useTexture } from '@react-three/drei';
 import * as THREE from 'three';

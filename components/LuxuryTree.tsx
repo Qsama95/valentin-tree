@@ -1,5 +1,6 @@
 
-import { useMemo, useRef, useState, useEffect, Suspense } from 'react';
+/// <reference types="@react-three/fiber" />
+import React, { useMemo, useRef, useState, useEffect, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Instance, Instances, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
@@ -8,11 +9,8 @@ import { TransformState } from '../types';
 
 interface LuxuryTreeProps {
     transformRef: any;
-    photoData?: typeof FRAME_DATA;
+    photoData?: any[];
 }
-
-const TREE_SLOPE = 0.45;
-// Removed SLANT_ANGLE as we want photos to stand upright (neat)
 
 // --- Shaders (Petals & Hearts) ---
 const petalVertexShader = `
@@ -51,38 +49,6 @@ const petalFragmentShader = `
     if (r > 1.0) discard;
     float alpha = 1.0 - smoothstep(0.5, 1.0, r);
     gl_FragColor = vec4(vColor, alpha * 0.8);
-  }
-`;
-
-const sparkVertexShader = `
-  uniform float uTime;
-  uniform float uChaosFactor;
-  attribute vec3 spiralPosition;
-  attribute vec3 chaosPosition;
-  attribute float sizeRandom;
-  attribute float speedRandom;
-  varying float vAlpha;
-  void main() {
-    float t = uChaosFactor;
-    vec3 sPos = spiralPosition;
-    float angle = uTime * speedRandom * 0.3 + sPos.y;
-    float r = length(sPos.xz);
-    sPos.x = r * cos(angle + atan(sPos.z, sPos.x));
-    sPos.z = r * sin(angle + atan(sPos.z, sPos.x));
-    vec3 pos = mix(sPos, chaosPosition, t);
-    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-    gl_Position = projectionMatrix * mvPosition;
-    gl_PointSize = (4.0 * sizeRandom + 1.0) * (1.0 / -mvPosition.z);
-    vAlpha = 0.4 + 0.6 * sin(uTime * 3.0 * speedRandom);
-  }
-`;
-
-const sparkFragmentShader = `
-  varying float vAlpha;
-  void main() {
-    vec2 coord = gl_PointCoord - vec2(0.5);
-    if (length(coord) > 0.5) discard;
-    gl_FragColor = vec4(1.0, 0.7, 0.8, vAlpha);
   }
 `;
 
@@ -132,7 +98,11 @@ const CupidArrowModel = () => (
 const LoveLetterModel = () => (
     <group scale={0.4}>
         <mesh><boxGeometry args={[0.4, 0.3, 0.02]} /><meshStandardMaterial color="#fdf5e6" roughness={1} /></mesh>
-        <mesh position={[0, 0, 0.015]}><cylinderGeometry args={[0.04, 0.04, 0.01, 16]} rotation={[Math.PI/2, 0, 0]} /><meshStandardMaterial color={LOVE_RED} metalness={0.5} roughness={0.2} /></mesh>
+        {/* Fix: Moved rotation from cylinderGeometry to parent mesh */}
+        <mesh position={[0, 0, 0.015]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.04, 0.04, 0.01, 16]} />
+            <meshStandardMaterial color={LOVE_RED} metalness={0.5} roughness={0.2} />
+        </mesh>
     </group>
 );
 
@@ -188,7 +158,7 @@ const OrnamentSystem = ({ transformRef }: { transformRef: any }) => {
         };
         const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
         geo.scale(0.08, 0.08, 0.08);
-        geo.rotateX(Math.PI); // Orient correctly
+        geo.rotateX(Math.PI); 
         return geo;
     }, []);
 
@@ -275,7 +245,7 @@ const BlossomParticleSystem = ({ count, type, transformRef }: { count: number, t
   );
 };
 
-const UnifiedPhotoFrame = ({ config, index, transformRef }: { config: any, index: number, transformRef: any, key?: any }) => {
+const UnifiedPhotoFrame = ({ config, index, transformRef, totalCount }: { config: any, index: number, transformRef: any, totalCount: number, key?: any }) => {
     const meshRef = useRef<THREE.Group>(null);
     const [texture, setTexture] = useState<THREE.Texture | null>(null);
     const [dims, setDims] = useState({ w: 0.5, h: 0.7 });
@@ -313,13 +283,12 @@ const UnifiedPhotoFrame = ({ config, index, transformRef }: { config: any, index
         return () => { isMounted = false; };
     }, [config.url]);
     
-    // Position photos standing straight (not leaning/slanted)
+    // Smooth layout calculation
     const foliageR = (3.6 - (config.y + 2.0)) * 0.45;
-    const r = foliageR + 0.15; // Slightly pushed out to look "neat" and avoid clipping
+    const r = foliageR + 0.15; 
     const formedPos = useMemo(() => new THREE.Vector3(r * Math.sin(config.angle), config.y, r * Math.cos(config.angle)), [config, r]);
     const chaosPos = useMemo(() => new THREE.Vector3((Math.random()-0.5)*10, (Math.random()-0.5)*10, (Math.random()-0.5)*10), []);
 
-    // Neat, vertical (not leaning) rotation: only Y rotation for outward orientation
     const treeRotation = useMemo(() => {
         return new THREE.Euler(0, config.angle, 0);
     }, [config.angle]);
@@ -379,10 +348,18 @@ const UnifiedPhotoFrame = ({ config, index, transformRef }: { config: any, index
     );
 }
 
-const PhotoInstances = ({ transformRef, photoData }: { transformRef: any, photoData: typeof FRAME_DATA }) => {
+const PhotoInstances = ({ transformRef, photoData }: { transformRef: any, photoData: any[] }) => {
     return (
         <group>
-            {photoData.map((f, i) => <UnifiedPhotoFrame key={f.url} config={f} index={i} transformRef={transformRef} />)}
+            {photoData.map((f, i) => (
+                <UnifiedPhotoFrame 
+                    key={f.url + i} 
+                    config={f} 
+                    index={i} 
+                    transformRef={transformRef} 
+                    totalCount={photoData.length}
+                />
+            ))}
         </group>
     );
 };
@@ -446,7 +423,7 @@ const LoveSpiral = ({ direction = 1, offset = 0 }) => {
     return <points ref={pointsRef}><bufferGeometry><bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} /></bufferGeometry><pointsMaterial color={ROSE_GOLD} size={0.025} sizeAttenuation transparent opacity={0.5} blending={THREE.AdditiveBlending} /></points>;
 };
 
-export const EternalLoveTree = ({ transformRef, photoData = FRAME_DATA }: LuxuryTreeProps) => {
+export const EternalLoveTree = ({ transformRef, photoData = [] }: LuxuryTreeProps) => {
   const treeContentRef = useRef<THREE.Group>(null);
   const photoContentRef = useRef<THREE.Group>(null);
 

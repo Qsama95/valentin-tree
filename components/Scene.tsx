@@ -1,5 +1,5 @@
-
-import { useRef } from 'react';
+/// <reference types="@react-three/fiber" />
+import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { ContactShadows, Float, PerspectiveCamera, Environment, Stars } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';

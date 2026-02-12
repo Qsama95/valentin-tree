@@ -4,7 +4,54 @@ import { Canvas } from '@react-three/fiber';
 import { Scene } from './components/Scene';
 import { GestureController } from './components/GestureController';
 import { TransformState } from './types';
-import { FRAME_DATA } from './constants';
+
+// --- Precise Asset Discovery Service ---
+// Probes specifically for 01.jpg through nn.jpg and validates that they are actual images.
+const probePhotos = async (maxCount = 99): Promise<string[]> => {
+    const discovered: string[] = [];
+    const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    
+    // Batch processing for efficiency
+    const batchSize = 4;
+    for (let i = 1; i <= maxCount; i += batchSize) {
+        const batchPromises = [];
+        for (let j = 0; j < batchSize && (i + j) <= maxCount; j++) {
+            const num = i + j;
+            const paddedNum = num.toString().padStart(2, '0');
+            
+            const validateImage = async () => {
+                for (const ext of extensions) {
+                    const url = `/photos/${paddedNum}${ext}`;
+                    try {
+                        const res = await fetch(url, { method: 'HEAD' });
+                        const contentType = res.headers.get('content-type');
+                        
+                        // CRITICAL: Ensure the server actually returned an image, not a fallback HTML page
+                        if (res.ok && contentType && contentType.startsWith('image/')) {
+                            return url;
+                        }
+                    } catch (e) {
+                        // Silently skip if network error
+                    }
+                }
+                return null;
+            };
+            batchPromises.push(validateImage());
+        }
+        
+        const results = await Promise.all(batchPromises);
+        const validResults = results.filter((r): r is string => r !== null);
+        
+        // If we found nothing in this batch, we assume the sequence has ended.
+        if (validResults.length === 0) {
+            // Note: We only break if we haven't found anything in a whole batch to account for minor gaps
+            if (i > batchSize) break; 
+        } else {
+            discovered.push(...validResults);
+        }
+    }
+    return discovered;
+};
 
 // --- Music Player ---
 const MusicPlayer = () => {
@@ -12,20 +59,26 @@ const MusicPlayer = () => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
-        const audio = new Audio('https://ia800501.us.archive.org/11/items/pachelbel/Pachelbel%20Canon%20in%20D%20Major.mp3');
+        const audio = new Audio();
         audio.loop = true;
         audio.volume = 0.4; 
         audioRef.current = audio;
 
+        // Directly target the specified filename
+        audio.src = '/music/bgm.mp3';
+
         const handleInteraction = () => {
-            if (audio.paused) {
+            if (audio.paused && audio.src) {
                 audio.play()
                     .then(() => setIsPlaying(true))
-                    .catch(() => {});
+                    .catch(() => {
+                        console.log("Waiting for user interaction or file exists check failed.");
+                    });
             }
             window.removeEventListener('click', handleInteraction);
         };
         window.addEventListener('click', handleInteraction);
+        
         return () => {
             audio.pause();
             audioRef.current = null;
@@ -59,7 +112,7 @@ const MusicPlayer = () => {
             
             <label className="cursor-pointer flex items-center gap-2 group">
                 <span className="text-[10px] text-white/30 group-hover:text-rose-300 transition-colors uppercase tracking-widest">
-                    Upload Track
+                    Custom Track
                 </span>
                 <div className="w-1.5 h-1.5 rounded-full bg-white/20 group-hover:bg-rose-500 transition-colors" />
                 <input 
@@ -80,7 +133,7 @@ const PhotoUploader = ({ onUpload }: { onUpload: (e: React.ChangeEvent<HTMLInput
             <label 
                 className="cursor-pointer flex items-center gap-3 px-5 py-2 rounded-full border bg-black/40 border-rose-600/50 text-rose-100 transition-all duration-300 hover:bg-rose-900/40 hover:border-rose-400 font-display tracking-widest text-xs"
             >
-                <span>UPLOAD MEMORIES</span>
+                <span>ADD MEMORIES</span>
                 <input 
                     type="file" 
                     multiple 
@@ -93,7 +146,7 @@ const PhotoUploader = ({ onUpload }: { onUpload: (e: React.ChangeEvent<HTMLInput
     );
 };
 
-const Overlay = ({ showPrompt }: { showPrompt: boolean }) => {
+const Overlay = ({ isScanning, photoCount }: { isScanning: boolean, photoCount: number }) => {
     return (
         <div className="absolute inset-0 pointer-events-none z-10 flex flex-col items-center justify-between py-12">
             
@@ -108,11 +161,11 @@ const Overlay = ({ showPrompt }: { showPrompt: boolean }) => {
                 <div className="w-32 h-[1px] bg-gradient-to-r from-transparent via-rose-500/50 to-transparent mx-auto mt-6" />
             </div>
 
-            {/* Empty State Prompt */}
-            {showPrompt && (
+            {/* Scanning State */}
+            {isScanning && (
                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                     <p className="font-display text-white/30 text-xs md:text-sm tracking-[0.3em] uppercase animate-pulse border border-white/10 px-6 py-3 rounded-full bg-black/20 backdrop-blur-sm">
-                         Upload photos to begin
+                     <p className="font-display text-rose-300/60 text-xs md:text-sm tracking-[0.4em] uppercase animate-pulse">
+                         Blossoming Memories...
                      </p>
                  </div>
             )}
@@ -120,7 +173,7 @@ const Overlay = ({ showPrompt }: { showPrompt: boolean }) => {
             {/* Footer Instructions */}
             <div className="flex flex-col items-center gap-2 mb-8 bg-black/10 backdrop-blur-sm p-4 rounded-3xl">
                  <p className="font-deco text-[10px] text-rose-500/70 tracking-[0.2em] uppercase">
-                    Interactive Sensory Experience
+                    {photoCount > 0 ? `${photoCount} Memories Discovered` : 'Blossom Tree Formed • Add Memories'}
                  </p>
                  <div className="flex flex-wrap justify-center gap-4 text-[9px] text-white/50 font-display tracking-widest px-4 text-center">
                      <span>OPEN PALM: BLOSSOM GALLERY</span>
@@ -134,25 +187,46 @@ const Overlay = ({ showPrompt }: { showPrompt: boolean }) => {
 };
 
 export default function App() {
-  const [photos, setPhotos] = useState<typeof FRAME_DATA>([]);
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [isScanning, setIsScanning] = useState(true);
+
+  useEffect(() => {
+      const loadDefaults = async () => {
+          setIsScanning(true);
+          // Only loads what it actually finds in /photos/01.jpg...nn.jpg
+          const photoFiles = await probePhotos(99);
+          
+          if (photoFiles.length > 0) {
+              const mappedPhotos = photoFiles.map((url, i) => {
+                  const t = i / photoFiles.length;
+                  return {
+                      url,
+                      y: (t * 2.2) - 1.1, 
+                      angle: t * Math.PI * 8 
+                  };
+              });
+              setPhotos(mappedPhotos);
+          } else {
+              // No local files found - starts purely as a blossom tree
+              setPhotos([]);
+          }
+          setIsScanning(false);
+      };
+      loadDefaults();
+  }, []);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
         const files = Array.from(e.target.files);
-        
-        // Map new files to the slot positions defined in FRAME_DATA.
-        // If user uploads more files than slots, we cycle through the slots using modulo.
-        const createdPhotos = files.map((file, i) => {
-            const templateIndex = i % FRAME_DATA.length;
-            const positionTemplate = FRAME_DATA[templateIndex];
-            
+        const newPhotos = files.map((file, i) => {
+            const index = photos.length + i;
             return {
-                ...positionTemplate,
-                url: URL.createObjectURL(file as Blob)
+                url: URL.createObjectURL(file as Blob),
+                y: (Math.random() * 2.2) - 1.1,
+                angle: Math.random() * Math.PI * 2
             };
         });
-        
-        setPhotos(createdPhotos);
+        setPhotos([...photos, ...newPhotos]);
     }
   };
 
@@ -172,15 +246,15 @@ export default function App() {
     <div className="relative w-full h-screen bg-[#050001] text-white overflow-hidden">
       <MusicPlayer />
       <PhotoUploader onUpload={handlePhotoUpload} />
-      <Overlay showPrompt={photos.length === 0} />
+      <Overlay isScanning={isScanning} photoCount={photos.length} />
       
       <GestureController transformRef={transformRef} />
 
       <Canvas 
         shadows 
-        dpr={[1, 1.5]} 
+        dpr={[1, 2]} 
         gl={{ 
-            antialias: false, 
+            antialias: true, 
             toneMappingExposure: 1.1,
             powerPreference: "high-performance"
         }}
