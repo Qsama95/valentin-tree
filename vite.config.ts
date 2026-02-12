@@ -5,23 +5,17 @@ import react from "@vitejs/plugin-react";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
 
-  // Repo name for GitHub Pages project site base path
-  // In GitHub Actions: owner/repo
+  // GitHub Actions provides: owner/repo
   const repoName =
     process.env.GITHUB_REPOSITORY?.split("/")[1] ||
     env.VITE_REPO_NAME ||
-    "valentin-tree";
+    "google-gemini-gesture";
 
-  // For project pages: https://username.github.io/<repoName>/
+  // Project site base: https://username.github.io/<repoName>/
   const base = mode === "production" ? `/${repoName}/` : "/";
 
-  // Allow API key to come from .env OR CI env vars
-  const apiKey =
-    env.GEMINI_API_KEY ||
-    process.env.GEMINI_API_KEY ||
-    env.VITE_GEMINI_API_KEY ||
-    process.env.VITE_GEMINI_API_KEY ||
-    "";
+  // Allow API key from either .env (local) or Actions secrets (CI)
+  const apiKey = process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || "";
 
   return {
     base,
