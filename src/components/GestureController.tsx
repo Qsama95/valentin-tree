@@ -1,8 +1,8 @@
 
 import { useEffect, useRef, useState } from 'react';
-import { initializeHandLandmarker, detectHands, analyzeGestures } from '../services/gestureService';
+import { initializeHandLandmarker, detectHands, analyzeGestures } from '../../services/gestureService';
 import { HandGesture, TransformState } from '../types';
-import { ROTATION_SPEED, ZOOM_SPEED, FRAME_DATA } from '../constants';
+import { ROTATION_SPEED, ZOOM_SPEED, FRAME_DATA } from '../../constants';
 
 interface GestureControllerProps {
   transformRef: any;

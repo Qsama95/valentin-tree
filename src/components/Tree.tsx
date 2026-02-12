@@ -3,7 +3,7 @@ import React, { useMemo, useRef, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Sparkles, Instance, Instances, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import { TREE_COLOR_BASE, GOLD_COLOR, SHIMMER_COLOR } from '../constants';
+import { TREE_COLOR_BASE, GOLD_COLOR, SHIMMER_COLOR } from '../../constants';
 import { TransformState } from '../types';
 
 interface TreeProps {

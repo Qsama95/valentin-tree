@@ -1,6 +1,6 @@
 
 import { FilesetResolver, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
-import { HandGesture, HandLandmark } from "../types";
+import { HandGesture, HandLandmark } from "../src/types";
 import { PINCH_RATIO, FIST_RATIO, PALM_RATIO } from "../constants";
 
 let handLandmarker: HandLandmarker | null = null;

@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useState, useEffect, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Instance, Instances, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
-import { GOLD_COLOR, LOVE_RED, ROSE_GOLD, BLUSH_PINK, DIAMOND_WHITE, FRAME_DATA } from '../constants';
+import { GOLD_COLOR, LOVE_RED, ROSE_GOLD, BLUSH_PINK, DIAMOND_WHITE, FRAME_DATA } from '../../constants';
 import { TransformState } from '../types';
 
 interface LuxuryTreeProps {

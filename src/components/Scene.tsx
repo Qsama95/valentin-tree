@@ -6,7 +6,7 @@ import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocess
 import { LuxuryTree } from './LuxuryTree';
 import * as THREE from 'three';
 import { TransformState } from '../types';
-import { LOVE_RED, ROSE_GOLD, BLUSH_PINK, FRAME_DATA } from '../constants';
+import { LOVE_RED, ROSE_GOLD, BLUSH_PINK, FRAME_DATA } from '../../constants';
 
 interface SceneProps {
   transformRef: any;

@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Scene } from './components/Scene';
-import { GestureController } from './components/GestureController';
-import { TransformState } from './types';
+import { Scene } from './src/components/Scene';
+import { GestureController } from './src/components/GestureController';
+import { TransformState } from './src/types';
 
 // Vite will set this to "/google-gemini-gesture/" in production (GitHub Pages)
 // and "/" in local dev.
