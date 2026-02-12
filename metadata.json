@@ -1,0 +1,7 @@
+{
+  "name": "Valentin Tree",
+  "description": "A high-fidelity 3D Valentin Tree interactive experience using React Three Fiber and MediaPipe for hand gesture control.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
